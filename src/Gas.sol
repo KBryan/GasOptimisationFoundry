@@ -12,17 +12,15 @@
 // 2432216
 // 2432204
 // 2401239
+// 2284755
 
 pragma solidity ^0.8.28;
-
-import "./Ownable.sol";
-
 
 error ErrorinGas();
 error ContractHacked();
 error NotSender();
 
-contract GasContract is Ownable {
+contract GasContract {
     bool public constant flag = true;
     uint256 public totalSupply = 0; // cannot be updated
     uint256 public paymentCounter = 0;
