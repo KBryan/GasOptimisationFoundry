@@ -1,13 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0; 
+// 2659266
+// 2601344
+// 2588141
+// 2588129
+// 2518121
+// 2512930
+// 2443511
+// 2438164
+
+pragma solidity ^0.8.27;
 
 import "./Ownable.sol";
 
 contract Constants {
-    uint256 public tradeFlag = 1;
-    uint256 public basicFlag = 0;
-    uint256 public dividendFlag = 1;
+    bool public flag = true;
 }
+
+error ErrorinGas();
+error ContractHacked();
+error NotSender();
 
 contract GasContract is Ownable, Constants {
     uint256 public totalSupply = 0; // cannot be updated
@@ -48,7 +59,7 @@ contract GasContract is Ownable, Constants {
     }
     uint256 wasLastOdd = 1;
     mapping(address => uint256) public isOddWhitelistUser;
-    
+
     struct ImportantStruct {
         uint256 amount;
         uint256 valueA; // max 3 digits
@@ -60,38 +71,38 @@ contract GasContract is Ownable, Constants {
     mapping(address => ImportantStruct) public whiteListStruct;
 
     event AddedToWhitelist(address userAddress, uint256 tier);
-
+    // "Gas Contract Only Admin Check-  Caller not admin"
     modifier onlyAdminOrOwner() {
         address senderOfTx = msg.sender;
         if (checkForAdmin(senderOfTx)) {
             require(
                 checkForAdmin(senderOfTx),
-                "Gas Contract Only Admin Check-  Caller not admin"
+                "Not Admin"
             );
             _;
         } else if (senderOfTx == contractOwner) {
             _;
         } else {
-            revert(
-                "Error in Gas contract - onlyAdminOrOwner modifier : revert happened because the originator of the transaction was not the admin, and furthermore he wasn't the owner of the contract, so he cannot run this function"
-            );
+            revert ErrorinGas();
         }
     }
-
+    // require message 1 == "Gas Contract CheckIfWhiteListed modifier : revert happened because the originator of the transaction was not the sender"
+    // require message 2 == "Gas Contract CheckIfWhiteListed modifier : revert happened because the user is not whitelisted"
+    // require message 3 == "Gas Contract CheckIfWhiteListed modifier : revert happened because the user's tier is incorrect, it cannot be over 4 as the only tier we have are: 1, 2, 3; therfore 4 is an invalid tier for the whitlist of this contract. make sure whitlist tiers were set correctly"
     modifier checkIfWhiteListed(address sender) {
         address senderOfTx = msg.sender;
         require(
             senderOfTx == sender,
-            "Gas Contract CheckIfWhiteListed modifier : revert happened because the originator of the transaction was not the sender"
+            "Gas Contract CheckIfWhiteListed modifier: 1"
         );
         uint256 usersTier = whitelist[senderOfTx];
         require(
             usersTier > 0,
-            "Gas Contract CheckIfWhiteListed modifier : revert happened because the user is not whitelisted"
+            "Gas Contract CheckIfWhiteListed modifier: 2"
         );
         require(
             usersTier < 4,
-            "Gas Contract CheckIfWhiteListed modifier : revert happened because the user's tier is incorrect, it cannot be over 4 as the only tier we have are: 1, 2, 3; therfore 4 is an invalid tier for the whitlist of this contract. make sure whitlist tiers were set correctly"
+            "Gas Contract CheckIfWhiteListed modifier: 3"
         );
         _;
     }
@@ -150,14 +161,8 @@ contract GasContract is Ownable, Constants {
         return balance;
     }
 
-    function getTradingMode() public view returns (bool mode_) {
-        bool mode = false;
-        if (tradeFlag == 1 || dividendFlag == 1) {
-            mode = true;
-        } else {
-            mode = false;
-        }
-        return mode;
+    function getTradingMode() public view returns (bool) {
+        return flag;
     }
 
 
@@ -288,7 +293,7 @@ contract GasContract is Ownable, Constants {
             wasLastOdd = 1;
             isOddWhitelistUser[_userAddrs] = wasLastAddedOdd;
         } else {
-            revert("Contract hacked, imposible, call help");
+            revert ContractHacked();
         }
         emit AddedToWhitelist(_userAddrs, _tier);
     }
