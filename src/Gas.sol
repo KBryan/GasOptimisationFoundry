@@ -7,20 +7,23 @@
 // 2512930
 // 2443511
 // 2438164
+// 2432216
+// 2432204
+// 2432216
+// 2432204
+// 2401239
 
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.28;
 
 import "./Ownable.sol";
 
-contract Constants {
-    bool public flag = true;
-}
 
 error ErrorinGas();
 error ContractHacked();
 error NotSender();
 
-contract GasContract is Ownable, Constants {
+contract GasContract is Ownable {
+    bool public constant flag = true;
     uint256 public totalSupply = 0; // cannot be updated
     uint256 public paymentCounter = 0;
     mapping(address => uint256) public balances;
@@ -31,14 +34,9 @@ contract GasContract is Ownable, Constants {
     mapping(address => uint256) public whitelist;
     address[5] public administrators;
     bool public isReady = false;
-    enum PaymentType {
-        Unknown,
-        BasicPayment,
-        Refund,
-        Dividend,
-        GroupPayment
-    }
-    PaymentType constant defaultPayment = PaymentType.Unknown;
+    enum PaymentType { Unknown, BasicPayment, Refund, Dividend, GroupPayment}
+
+    PaymentType constant private defaultPayment = PaymentType.Unknown;
 
     History[] public paymentHistory; // when a payment was updated
 
@@ -161,7 +159,7 @@ contract GasContract is Ownable, Constants {
         return balance;
     }
 
-    function getTradingMode() public view returns (bool) {
+    function getTradingMode() public pure returns (bool) {
         return flag;
     }
 
@@ -202,11 +200,11 @@ contract GasContract is Ownable, Constants {
         address senderOfTx = msg.sender;
         require(
             balances[senderOfTx] >= _amount,
-            "Gas Contract - Transfer function - Sender has insufficient Balance"
+            "Sender has insufficient Balance"
         );
         require(
             bytes(_name).length < 9,
-            "Gas Contract - Transfer function -  The recipient name is too long, there is a max length of 8 characters"
+            "The recipient name is too long"
         );
         balances[senderOfTx] -= _amount;
         balances[_recipient] += _amount;
