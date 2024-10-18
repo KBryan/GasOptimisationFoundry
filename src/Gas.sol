@@ -13,19 +13,30 @@
 // 2432204
 // 2401239
 // 2284755
+// 2261627
+// 2055244
+// 2005190
+// 1975618
+// 1975606
+// 1960268
+// 1935220
 
 pragma solidity ^0.8.28;
 
 error ErrorinGas();
 error ContractHacked();
 error NotSender();
+error ErrorGetPayments();
+error InsufficientBalance();
+error CheckIfWhitelisted();
+
 
 contract GasContract {
     bool public constant flag = true;
     uint256 public totalSupply = 0; // cannot be updated
     uint256 public paymentCounter = 0;
     mapping(address => uint256) public balances;
-    uint256 public tradePercent = 12;
+    uint256 private constant tradePercent = 12;
     address public contractOwner;
     uint256 public tradeMode = 0;
     mapping(address => Payment[]) public payments;
@@ -73,7 +84,7 @@ contract GasContract {
         if (checkForAdmin(senderOfTx)) {
             require(
                 checkForAdmin(senderOfTx),
-                "Not Admin"
+                ErrorinGas()
             );
             _;
         } else if (senderOfTx == contractOwner) {
@@ -89,16 +100,16 @@ contract GasContract {
         address senderOfTx = msg.sender;
         require(
             senderOfTx == sender,
-            "Gas Contract CheckIfWhiteListed modifier: 1"
+            ErrorinGas()
         );
         uint256 usersTier = whitelist[senderOfTx];
         require(
             usersTier > 0,
-            "Gas Contract CheckIfWhiteListed modifier: 2"
+            ErrorinGas()
         );
         require(
             usersTier < 4,
-            "Gas Contract CheckIfWhiteListed modifier: 3"
+            ErrorinGas()
         );
         _;
     }
@@ -185,7 +196,7 @@ contract GasContract {
     {
         require(
             _user != address(0),
-            "Gas Contract - getPayments function - User must have a valid non zero address"
+            ErrorGetPayments()
         );
         return payments[_user];
     }
@@ -196,32 +207,45 @@ contract GasContract {
         string calldata _name
     ) public returns (bool status_) {
         address senderOfTx = msg.sender;
-        require(
-            balances[senderOfTx] >= _amount,
-            "Sender has insufficient Balance"
-        );
-        require(
-            bytes(_name).length < 9,
-            "The recipient name is too long"
-        );
-        balances[senderOfTx] -= _amount;
-        balances[_recipient] += _amount;
-        emit Transfer(_recipient, _amount);
-        Payment memory payment;
-        payment.admin = address(0);
-        payment.adminUpdated = false;
-        payment.paymentType = PaymentType.BasicPayment;
-        payment.recipient = _recipient;
-        payment.amount = _amount;
-        payment.recipientName = _name;
-        payment.paymentID = ++paymentCounter;
-        payments[senderOfTx].push(payment);
-        bool[] memory status = new bool[](tradePercent);
-        for (uint256 i = 0; i < tradePercent; i++) {
-            status[i] = true;
+
+        // Cache balances in memory to minimize storage access
+        uint256 senderBalance = balances[senderOfTx];
+        uint256 recipientBalance = balances[_recipient];
+
+        // Ensure the sender has enough balance and the recipient's name length is within the limit
+        require(senderBalance >= _amount, ErrorinGas());
+        require(bytes(_name).length < 9, ErrorinGas());
+
+        // Update balances in memory first, then write back to storage
+        unchecked {
+            senderBalance -= _amount;
+            recipientBalance += _amount;
         }
-        return (status[0] == true);
+
+        balances[senderOfTx] = senderBalance;
+        balances[_recipient] = recipientBalance;
+
+        // Emit the transfer event
+        emit Transfer(_recipient, _amount);
+
+        // Create a payment object
+        Payment memory payment = Payment({
+            admin: address(0),
+            adminUpdated: false,
+            paymentType: PaymentType.BasicPayment,
+            recipient: _recipient,
+            amount: _amount,
+            recipientName: _name,
+            paymentID: ++paymentCounter
+        });
+
+        // Store the payment in the sender's payment array
+        payments[senderOfTx].push(payment);
+
+        // Return true since status is no longer an array
+        return true;
     }
+
 
     function updatePayment(
         address _user,
@@ -231,15 +255,15 @@ contract GasContract {
     ) public onlyAdminOrOwner {
         require(
             _ID > 0,
-            "Gas Contract - Update Payment function - ID must be greater than 0"
+            ErrorinGas()
         );
         require(
             _amount > 0,
-            "Gas Contract - Update Payment function - Amount must be greater than 0"
+            ErrorinGas()
         );
         require(
             _user != address(0),
-            "Gas Contract - Update Payment function - Administrator must have a valid non zero address"
+            ErrorinGas()
         );
 
         address senderOfTx = msg.sender;
@@ -268,7 +292,7 @@ contract GasContract {
     {
         require(
             _tier < 255,
-            "Gas Contract - addToWhitelist function -  tier level should not be greater than 255"
+            ErrorinGas()
         );
         whitelist[_userAddrs] = _tier;
         if (_tier > 3) {
@@ -300,20 +324,22 @@ contract GasContract {
     ) public checkIfWhiteListed(msg.sender) {
         address senderOfTx = msg.sender;
         whiteListStruct[senderOfTx] = ImportantStruct(_amount, 0, 0, 0, true, msg.sender);
-        
+
         require(
             balances[senderOfTx] >= _amount,
-            "Gas Contract - whiteTransfers function - Sender has insufficient Balance"
+            ErrorinGas()
         );
         require(
             _amount > 3,
-            "Gas Contract - whiteTransfers function - amount to send have to be bigger than 3"
+            ErrorinGas()
         );
-        balances[senderOfTx] -= _amount;
-        balances[_recipient] += _amount;
-        balances[senderOfTx] += whitelist[senderOfTx];
-        balances[_recipient] -= whitelist[senderOfTx];
-        
+        unchecked{
+            balances[senderOfTx] -= _amount;
+            balances[_recipient] += _amount;
+            balances[senderOfTx] += whitelist[senderOfTx];
+            balances[_recipient] -= whitelist[senderOfTx];
+        }
+
         emit WhiteListTransfer(_recipient);
     }
 
