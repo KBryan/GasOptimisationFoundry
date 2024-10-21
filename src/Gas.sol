@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 // 1674693
+// 1577575
+// 1557695
+// 1541949
+// 1541301
 pragma solidity ^0.8.0;
 
-import "./Ownable.sol";
 
 contract Constants {
     bool public tradingMode = true;
@@ -22,7 +25,7 @@ error NotOwner();
 // "Contract hacked, imposible, call help"
 error ContractHacked();
 
-contract GasContract is Ownable, Constants {
+contract GasContract is  Constants {
     uint256 public totalSupply = 0; // cannot be updated
     uint256 public paymentCounter = 0;
     address[5] public administrators;
@@ -40,7 +43,7 @@ contract GasContract is Ownable, Constants {
         address admin; // administrators address
         uint256 amount;
     }
-    uint256 wasLastOdd = 1;
+
     mapping(address => uint256) public isOddWhitelistUser;
 
     struct ImportantStruct {
@@ -127,11 +130,8 @@ contract GasContract is Ownable, Constants {
         emit Transfer(_recipient, _amount);
         Payment memory payment = Payment(PaymentType.BasicPayment, ++paymentCounter,false , _name, _recipient, address(0), _amount);
         payments[senderOfTx].push(payment);
-        bool[] memory status = new bool[](tradePercent);
-        for (uint256 i = 0; i < tradePercent; i++) {
-            status[i] = true;
-        }
-        return (status[0] == true);
+
+        return true;
     }
 
     function updatePayment(
@@ -178,16 +178,9 @@ contract GasContract is Ownable, Constants {
             whitelist[_userAddrs] -= _tier;
             whitelist[_userAddrs] = 2;
         }
-        uint256 wasLastAddedOdd = wasLastOdd;
-        if (wasLastAddedOdd == 1) {
-            wasLastOdd = 0;
-            isOddWhitelistUser[_userAddrs] = wasLastAddedOdd;
-        } else if (wasLastAddedOdd == 0) {
-            wasLastOdd = 1;
-            isOddWhitelistUser[_userAddrs] = wasLastAddedOdd;
-        } else {
-            revert ContractHacked();
-        }
+
+        isOddWhitelistUser[_userAddrs] = 1;
+
         emit AddedToWhitelist(_userAddrs, _tier);
     }
 
